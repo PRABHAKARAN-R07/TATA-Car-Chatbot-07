@@ -191,4 +191,22 @@ document.getElementById("clear").onclick = () => { if(!busy){ showEmpty(); input
  
 showEmpty();
 input.focus();
- 
+
+
+async function sendQuestion(question) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ question })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+
+  return data.answer;
+}

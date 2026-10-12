@@ -49,7 +49,17 @@ chain = prompt | llm | StrOutputParser()
 
 
 def ask(question: str):
+    if not isinstance(question, str):
+        raise TypeError("question must be a string")
+
+    question = question.strip()
+    if not question:
+        return "Please enter a question about a Tata car, variant, or feature.", []
+
     docs = retriever.invoke(question)
+    if not docs:
+        return "I couldn't find that information in the documents.", []
+
     context = "\n\n".join(d.page_content for d in docs)
     answer = chain.invoke({"context": context, "question": question})
     sources = sorted({
