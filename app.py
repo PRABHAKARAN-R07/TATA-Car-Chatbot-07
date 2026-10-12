@@ -1,140 +1,80 @@
 from pathlib import Path
-import streamlit as st
+import logging
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
 from chatbot import ask
 
-# ---------------- Page setup ----------------
-st.set_page_config(
-    page_title="Tata Car Guide",
-    page_icon="🚗",
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
-
 BASE_DIR = Path(__file__).resolve().parent
-CSS_PATH = BASE_DIR / "static" / "style.css"
+STATIC_DIR = BASE_DIR / "static"
 
-# Load the custom theme from static/style.css.
-def load_css():
-    if CSS_PATH.exists():
-        css = CSS_PATH.read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+app = FastAPI(title="Tata Car Guide API")
+logging.basicConfig(level=logging.INFO)
 
-load_css()
 
-MODELS = [
-    "Punch", "Punch EV", "Nexon", "Nexon EV", "Curvv", "Curvv EV",
-    "Harrier", "Harrier EV", "Safari", "Sierra",
-]
-STARTERS = [
-    "Which Nexon variants have a sunroof?",
-    "Compare the Harrier and the Safari",
-    "What colours does the Curvv come in?",
-]
+class Query(BaseModel):
+    question: str
 
-# ---------------- Session state ----------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "pending_question" not in st.session_state:
-    st.session_state.pending_question = None
 
-# ---------------- Header ----------------
-st.markdown(
-    '<div class="tata-header">'
-    '<div class="tata-header-top"><span class="tata-signal"></span>'
-    '<div><div class="tata-title">Tata Car Guide</div>'
-    '<div class="tata-subtitle">Answers from the Tata brochures</div></div>'
-    '</div><div class="tata-tagline">Ask about variants, features, engines, batteries and colours.</div>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+@app.get("/")
+def home():
+    index_file = STATIC_DIR / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=404, detail="static/index.html was not found.")
+    return FileResponse(index_file)
 
-header_cols = st.columns([5, 1])
-with header_cols[0]:
-    st.markdown('<div class="section-label">EXPLORE A MODEL</div>', unsafe_allow_html=True)
-with header_cols[1]:
-    if st.button("New chat", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.pending_question = None
-        st.rerun()
 
-# Model chips: each click sends a question to the same RAG function.
-model_cols = st.columns(5)
-for index, model in enumerate(MODELS):
-    with model_cols[index % 5]:
-        if st.button(model, key=f"model_{index}", use_container_width=True):
-            st.session_state.pending_question = (
-                f"Give me an overview of the Tata {model}: price range, variants, "
-                "colours, engine or battery and range, safety rating and key features. "
-                "If a detail is not present in the provided documents, say so."
-            )
-            st.rerun()
+@app.post("/chat")
+def chat(q: Query):
+    question = q.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is empty.")
 
-st.markdown('<div class="chat-divider"></div>', unsafe_allow_html=True)
+    try:
+        result = ask(question)
 
-# ---------------- Empty state / starter questions ----------------
-if not st.session_state.messages:
-    st.markdown(
-        '<div class="welcome-card"><div class="welcome-eyebrow">TATA CAR ASSISTANT</div>'
-        '<div class="welcome-title">Which Tata are you looking at?</div>'
-        '<div class="welcome-copy">Ask about variants, features, engines or colours. '
-        'Choose a model above or try one of these questions.</div></div>',
-        unsafe_allow_html=True,
-    )
-    starter_cols = st.columns(1)
-    for index, starter in enumerate(STARTERS):
-        if st.button(f"↗  {starter}", key=f"starter_{index}", use_container_width=True):
-            st.session_state.pending_question = starter
-            st.rerun()
+        # Your existing chatbot may return (answer, sources) or just an answer.
+        if isinstance(result, tuple) and len(result) >= 2:
+            answer, sources = result[0], result[1]
+        else:
+            answer, sources = result, []
 
-# ---------------- Chat history ----------------
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        if message.get("sources"):
-            st.markdown(
-                "<div class='source-label'>SOURCES</div>",
-                unsafe_allow_html=True,
-            )
-            st.caption(" · ".join(map(str, message["sources"])))
+        if not isinstance(answer, str):
+            answer = getattr(answer, "content", str(answer))
 
-# ---------------- Question handling ----------------
-question = st.chat_input("Ask about a Tata car, variant or feature…")
-if question:
-    st.session_state.pending_question = question
+        if sources is None:
+            sources = []
+        elif not isinstance(sources, (list, tuple)):
+            sources = [str(sources)]
 
-if st.session_state.pending_question:
-    current_question = st.session_state.pending_question.strip()
-    st.session_state.pending_question = None
+        # Convert source documents into JSON-safe values.
+        safe_sources = []
+        for source in sources:
+            if isinstance(source, str):
+                safe_sources.append(source)
+            elif hasattr(source, "metadata"):
+                metadata = source.metadata or {}
+                safe_sources.append({
+                    "source": str(metadata.get("source", metadata.get("file_path", "Tata brochure"))),
+                    "page": metadata.get("page", "")
+                })
+            else:
+                safe_sources.append(str(source))
 
-    if current_question:
-        st.session_state.messages.append({"role": "user", "content": current_question})
-        with st.chat_message("user"):
-            st.markdown(current_question)
+        return {"answer": answer, "sources": safe_sources}
 
-        with st.chat_message("assistant"):
-            with st.spinner("Searching the Tata car documents…"):
-                try:
-                    result = ask(current_question)
-                    if not isinstance(result, tuple) or len(result) != 2:
-                        raise ValueError(
-                            "chatbot.ask(question) must return two values: (answer, sources)."
-                        )
-                    answer, sources = result
-                    answer = str(answer or "I couldn't find that information in the documents.")
-                    sources = sources or []
-                    st.markdown(answer)
-                    if sources:
-                        st.markdown("<div class='source-label'>SOURCES</div>", unsafe_allow_html=True)
-                        st.caption(" · ".join(map(str, sources)))
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": sources,
-                    })
-                except Exception as exc:
-                    st.error("The chatbot could not answer this question.")
-                    st.caption(f"Error details: {exc}")
-                    st.info(
-                        "Check that chatbot.py is present, the Chroma database is available, "
-                        "and the required API key is configured in Streamlit Secrets."
-                    )
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Chat request failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not generate an answer. Check the server terminal for details."
+        )
+
+
+# Mount static assets last so the API route remains available.
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

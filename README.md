@@ -1,53 +1,20 @@
-﻿# Tata Car Guide
+﻿TATA CAR GUIDE UI UPDATE
 
-A lightweight RAG chatbot for Tata SUV questions built with Python, LangChain, ChromaDB, and Streamlit.
+Files:
+- app.py: FastAPI backend (uses your existing chatbot.py)
+- static/index.html: UI
+- static/style.css: styling
+- static/script.js: chat interactions
+- static/tata-safari.png: provided Tata Safari image
 
-## Features
-
-- Search over Tata SUV brochures and specs using Chroma vector search
-- Ask natural-language questions about variants, features, colours, engines, and batteries
-- Display answer sources from the retrieved documents
-- Built as a Streamlit app with a simple FastAPI endpoint for a web UI
-
-## Project structure
-
-- `app.py` — Streamlit chat UI
-- `api.py` — FastAPI chat endpoint
-- `chatbot.py` — RAG retrieval and Groq-based answer generation
-- `ingest.py` — document ingestion into ChromaDB
-- `static/` — standalone frontend assets
-- `data/` — source content for ingestion
-- `chroma_db/` — persisted vector database
-
-## Local setup
-
-1. Create a virtual environment and activate it.
-2. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Add a `.env` file with your Groq API key:
-
-   ```bash
-   GROQ_API_KEY=your_key_here
-   ```
-
-4. Run the Streamlit app:
-
-   ```bash
-   streamlit run app.py
-   ```
-
-5. Or run the API locally:
-
-   ```bash
-   uvicorn api:app --reload
-   ```
-
-## Notes
-
-- The vector database is persisted under `chroma_db/`.
-- If the database is missing or stale, re-run ingestion to rebuild it.
-- Source files should not be committed if they contain private API keys or local secrets.
+IMPORTANT:
+1. Copy these files into your existing project. Keep your current chatbot.py, .env,
+   Chroma database, and brochure documents.
+2. The image is expected at static/tata-safari.png.
+3. The frontend calls POST /chat and expects ask(question) to return either:
+   (answer, sources) or just answer.
+4. Run from the project root:
+   python -m pip install fastapi uvicorn
+   python -m uvicorn app:app --reload
+5. Open http://127.0.0.1:8000
+6. Do not share your .env or Groq API key.

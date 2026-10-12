@@ -1,38 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tata Car Guide</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#070d16">
+  <meta name="description" content="Explore Tata cars with an AI-powered RAG chatbot.">
+  <title>Tata Car Guide | AI Automotive Assistant</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/script.js" defer></script>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <span class="signal" id="signal" aria-hidden="true"></span>
-    <h1>Tata Car Guide</h1>
-    <span class="sub">Answers from the Tata brochures</span>
-    <button id="clear" type="button">New chat</button>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">T</div>
+        <div class="brand-divider"></div>
+        <div>
+          <h1>TATA CAR GUIDE</h1>
+          <p class="brand-subtitle">RAG-Powered Automotive Chatbot</p>
+        </div>
+      </div>
+
+      <div class="intro">
+        <span class="red-line"></span>
+        <p>Your smart companion to explore Tata cars and get information from official brochures, powered by AI.</p>
+      </div>
+
+      <div class="feature-list">
+        <article class="feature">
+          <div class="feature-icon">▤</div>
+          <div><h3>Tata Brochures Knowledge</h3><p>Retrieve relevant information from Tata car brochures using RAG.</p></div>
+        </article>
+        <article class="feature">
+          <div class="feature-icon">✳</div>
+          <div><h3>Smart &amp; Contextual Answers</h3><p>Use LangChain and Groq for contextual, AI-generated responses.</p></div>
+        </article>
+        <article class="feature">
+          <div class="feature-icon">ϟ</div>
+          <div><h3>Explore Tata Models</h3><p>Discover variants, features, colours, engines and EV details.</p></div>
+        </article>
+      </div>
+
+      <div class="car-visual" aria-label="Tata Safari vehicle image">
+        <div class="car-glow"></div>
+        <img src="/tata-safari.png" alt="Black Tata Safari SUV on a city road" class="car-image">
+      </div>
+
+      <div class="tech-stack">
+        <h3>BUILT WITH</h3>
+        <div class="tech-tags">
+          <span>Python</span><span>LangChain</span><span>ChromaDB</span>
+          <span>Hugging Face</span><span>Groq</span>
+        </div>
+      </div>
+      <div class="sidebar-footer">AI-powered car knowledge, one question at a time.</div>
+    </aside>
+
+    <main class="chat-panel">
+      <header class="chat-header">
+        <div class="assistant-avatar">✦</div>
+        <div class="header-copy">
+          <h2>Tata Car Guide</h2>
+          <p>Ask about variants, features, engines, batteries and colours.</p>
+        </div>
+        <button type="button" id="newChatBtn" class="new-chat-btn"><span>＋</span> New chat</button>
+      </header>
+
+      <section class="model-section">
+        <div class="section-heading"><span class="section-number">01</span><h3>EXPLORE A MODEL</h3></div>
+        <div class="model-grid" id="modelGrid">
+          <button type="button" class="model-btn" data-model="Punch" aria-pressed="false">Punch</button>
+          <button type="button" class="model-btn" data-model="Punch EV" aria-pressed="false">Punch EV</button>
+          <button type="button" class="model-btn" data-model="Nexon" aria-pressed="false">Nexon</button>
+          <button type="button" class="model-btn" data-model="Nexon EV" aria-pressed="false">Nexon EV</button>
+          <button type="button" class="model-btn" data-model="Curvv" aria-pressed="false">Curvv</button>
+          <button type="button" class="model-btn" data-model="Curvv EV" aria-pressed="false">Curvv EV</button>
+          <button type="button" class="model-btn" data-model="Harrier" aria-pressed="false">Harrier</button>
+          <button type="button" class="model-btn" data-model="Harrier EV" aria-pressed="false">Harrier EV</button>
+          <button type="button" class="model-btn" data-model="Safari" aria-pressed="false">Safari</button>
+          <button type="button" class="model-btn" data-model="Sierra" aria-pressed="false">Sierra</button>
+        </div>
+      </section>
+
+      <section class="conversation">
+        <div class="conversation-heading">
+          <span class="online-dot"></span><span>TATA CAR ASSISTANT</span><span class="ready-label">READY TO HELP</span>
+        </div>
+        <div id="chatMessages" class="chat-messages" aria-live="polite">
+          <article class="message assistant-message">
+            <div class="message-avatar">✦</div>
+            <div class="message-content">
+              <h3>Welcome to Tata Car Guide</h3>
+              <p>Which Tata are you looking at? Choose a model above or ask me about variants, features, engines, batteries or colours.</p>
+              <div class="suggestions" id="suggestions">
+                <button type="button" class="suggestion-btn" data-question="Which Tata Nexon variants have a sunroof?">↗ Which Nexon variants have a sunroof?</button>
+                <button type="button" class="suggestion-btn" data-question="Compare the Tata Harrier and Tata Safari.">↗ Compare the Harrier and the Safari</button>
+                <button type="button" class="suggestion-btn" data-question="What colours does the Tata Curvv come in?">↗ What colours does the Curvv come in?</button>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div id="typingIndicator" class="typing-indicator" hidden><span></span><span></span><span></span><small>Searching Tata brochures...</small></div>
+      </section>
+
+      <form id="chatForm" class="chat-form">
+        <label for="questionInput" class="sr-only">Ask about a Tata car</label>
+        <textarea id="questionInput" rows="1" maxlength="4000" placeholder="Ask about a Tata car, variant or feature..." required></textarea>
+        <button type="submit" id="sendBtn" class="send-btn" aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+      <footer class="chat-footer"><span>POWERED BY RAG + LLM</span><span>Answers depend on the available brochures.</span></footer>
+    </main>
   </div>
-  <nav class="lineup" id="lineup" aria-label="Tata SUV models"></nav>
-</header>
-
-<main id="scroller">
-  <div class="thread" id="thread" aria-live="polite"></div>
-</main>
-
-<footer>
-  <form class="composer" id="form">
-    <textarea id="input" rows="1" placeholder="Ask about a Tata car, variant or feature" aria-label="Your question"></textarea>
-    <button id="send" type="submit">Send</button>
-  </form>
-  <div class="hint">Enter to send, Shift+Enter for a new line</div>
-</footer>
-
-<script src="./script.js" defer></script>
 </body>
 </html>
- 

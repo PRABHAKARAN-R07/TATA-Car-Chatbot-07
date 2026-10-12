@@ -1,5 +1,7 @@
 ﻿Flask
 gunicorn
+fastapi
+uvicorn
 python-dotenv
 langchain
 langchain-community
