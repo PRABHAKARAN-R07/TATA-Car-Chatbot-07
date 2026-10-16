@@ -1,6 +1,4 @@
-﻿Flask
-gunicorn
-fastapi
+﻿fastapi
 uvicorn
 python-dotenv
 langchain
@@ -9,4 +7,3 @@ langchain-chroma
 langchain-huggingface
 langchain-groq
 sentence-transformers
-pypdf

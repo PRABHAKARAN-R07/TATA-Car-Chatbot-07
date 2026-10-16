@@ -1,80 +1,89 @@
-from pathlib import Path
+
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from chatbot import ask
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
 
-app = FastAPI(title="Tata Car Guide API")
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="Tata Car Guide API",
+    description="RAG chatbot for Tata Motors cars",
+    version="1.0.0"
+)
 
 
 class Query(BaseModel):
-    question: str
+    question: str = Field(
+        ...,
+        min_length=1,
+        description="Question about Tata cars"
+    )
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def home():
-    index_file = STATIC_DIR / "index.html"
-    if not index_file.exists():
-        raise HTTPException(status_code=404, detail="static/index.html was not found.")
-    return FileResponse(index_file)
+    if not INDEX_FILE.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="static/index.html was not found."
+        )
+
+    return FileResponse(INDEX_FILE)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 @app.post("/chat")
-def chat(q: Query):
-    question = q.question.strip()
+def chat(query: Query):
+    question = query.question.strip()
+
     if not question:
-        raise HTTPException(status_code=400, detail="Question is empty.")
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a question."
+        )
 
     try:
-        result = ask(question)
+        answer, sources = ask(question)
 
-        # Your existing chatbot may return (answer, sources) or just an answer.
-        if isinstance(result, tuple) and len(result) >= 2:
-            answer, sources = result[0], result[1]
-        else:
-            answer, sources = result, []
+        return {
+            "answer": answer,
+            "sources": sources or []
+        }
 
-        if not isinstance(answer, str):
-            answer = getattr(answer, "content", str(answer))
-
-        if sources is None:
-            sources = []
-        elif not isinstance(sources, (list, tuple)):
-            sources = [str(sources)]
-
-        # Convert source documents into JSON-safe values.
-        safe_sources = []
-        for source in sources:
-            if isinstance(source, str):
-                safe_sources.append(source)
-            elif hasattr(source, "metadata"):
-                metadata = source.metadata or {}
-                safe_sources.append({
-                    "source": str(metadata.get("source", metadata.get("file_path", "Tata brochure"))),
-                    "page": metadata.get("page", "")
-                })
-            else:
-                safe_sources.append(str(source))
-
-        return {"answer": answer, "sources": safe_sources}
-
-    except HTTPException:
-        raise
     except Exception:
-        logging.exception("Chat request failed")
+        logger.exception("Chat request failed")
+
         raise HTTPException(
             status_code=500,
-            detail="Could not generate an answer. Check the server terminal for details."
+            detail=(
+                "Could not generate an answer. "
+                "Check the Vercel function logs."
+            )
         )
 
 
-# Mount static assets last so the API route remains available.
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+# Mount frontend assets after defining API routes.
+if STATIC_DIR.is_dir():
+    app.mount(
+        "/",
+        StaticFiles(
+            directory=str(STATIC_DIR),
+            html=True
+        ),
+        name="static"
+    )
