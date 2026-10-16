@@ -23,6 +23,11 @@ app = FastAPI(
 )
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 class Query(BaseModel):
     question: str = Field(
         ...,
